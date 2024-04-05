@@ -145,16 +145,11 @@ contract MultiOwnerLightAccount is BaseLightAccount, CustomSlotInitializable {
             bytes32 signedHash = userOpHash.toEthSignedMessageHash();
             bytes memory signature = userOp.signature[1:];
             return _successToValidationData(_isValidEOAOwnerSignature(signedHash, signature));
-        } else if (signatureType == uint8(SignatureType.CONTRACT)) {
-            // Contract signature without address
-            bytes memory signature = userOp.signature[1:];
-            return _successToValidationData(_isValidContractOwnerSignatureNowLoop(userOpHash, signature));
         } else if (signatureType == uint8(SignatureType.CONTRACT_WITH_ADDR)) {
             // Contract signature with address
             address contractOwner = address(bytes20(userOp.signature[1:21]));
             bytes memory signature = userOp.signature[21:];
-            return
-                _successToValidationData(_isValidContractOwnerSignatureNowSingle(contractOwner, userOpHash, signature));
+            return _successToValidationData(_isValidContractOwnerSignatureNow(contractOwner, userOpHash, signature));
         }
         revert InvalidSignatureType();
     }
@@ -175,36 +170,13 @@ contract MultiOwnerLightAccount is BaseLightAccount, CustomSlotInitializable {
     /// @param digest The digest to be checked.
     /// @param signature The signature to be checked.
     /// @return True if the signature is valid and by an owner, false otherwise.
-    function _isValidContractOwnerSignatureNowSingle(address contractOwner, bytes32 digest, bytes memory signature)
+    function _isValidContractOwnerSignatureNow(address contractOwner, bytes32 digest, bytes memory signature)
         internal
         view
         returns (bool)
     {
         return SignatureChecker.isValidERC1271SignatureNow(contractOwner, digest, signature)
             && _getStorage().owners.contains(contractOwner.toSetValue());
-    }
-
-    /// @notice Check if the signature is a valid ERC-1271 signature by a contract owner for the given digest by
-    /// checking all owners in a loop.
-    /// @dev Susceptible to denial-of-service by a malicious owner contract. To avoid this, use a signature type that
-    /// includes the owner address.
-    /// @param digest The digest to be checked.
-    /// @param signature The signature to be checked.
-    /// @return True if the signature is valid and by an owner, false otherwise.
-    function _isValidContractOwnerSignatureNowLoop(bytes32 digest, bytes memory signature)
-        internal
-        view
-        returns (bool)
-    {
-        LightAccountStorage storage _storage = _getStorage();
-        address[] memory owners_ = _storage.owners.getAll().toAddressArray();
-        uint256 length = owners_.length;
-        for (uint256 i = 0; i < length; ++i) {
-            if (SignatureChecker.isValidERC1271SignatureNow(owners_[i], digest, signature)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /// @dev The signature is valid if it is signed by the owner's private key (if the owner is an EOA) or if it is a
@@ -224,15 +196,11 @@ contract MultiOwnerLightAccount is BaseLightAccount, CustomSlotInitializable {
             // EOA signature
             bytes memory signature = trimmedSignature[1:];
             return _isValidEOAOwnerSignature(derivedHash, signature);
-        } else if (signatureType == uint8(SignatureType.CONTRACT)) {
-            // Contract signature without address
-            bytes memory signature = trimmedSignature[1:];
-            return _isValidContractOwnerSignatureNowLoop(derivedHash, signature);
         } else if (signatureType == uint8(SignatureType.CONTRACT_WITH_ADDR)) {
             // Contract signature with address
             address contractOwner = address(bytes20(trimmedSignature[1:21]));
             bytes memory signature = trimmedSignature[21:];
-            return _isValidContractOwnerSignatureNowSingle(contractOwner, derivedHash, signature);
+            return _isValidContractOwnerSignatureNow(contractOwner, derivedHash, signature);
         }
         revert InvalidSignatureType();
     }
