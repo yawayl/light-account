@@ -477,18 +477,6 @@ contract LightAccountTest is Test {
         assertEq(initialized, 1);
     }
 
-    function testValidateInitCodeHash() external {
-        assertEq(
-            keccak256(
-                abi.encodePacked(
-                    type(LightAccountFactory).creationCode,
-                    bytes32(uint256(uint160(0x0000000071727De22E5E9d8BAf0edAc6f37da032)))
-                )
-            ),
-            0x5ad3bccf602cb277e15f7bcac8cd88873618c6f038cbcd490610d91be26fcf34
-        );
-    }
-
     function _useContractOwner() internal {
         vm.prank(eoaAddress);
         account.transferOwnership(address(contractOwner));

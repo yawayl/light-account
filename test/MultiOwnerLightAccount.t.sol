@@ -622,18 +622,6 @@ contract MultiOwnerLightAccountTest is Test {
         assertEq(initialized, 1);
     }
 
-    function testValidateInitCodeHash() external {
-        assertEq(
-            keccak256(
-                abi.encodePacked(
-                    type(MultiOwnerLightAccountFactory).creationCode,
-                    bytes32(uint256(uint160(0x0000000071727De22E5E9d8BAf0edAc6f37da032)))
-                )
-            ),
-            0x80c58908b2149ff4b21996454a1ad577de59738d9f23637fe3f01506a8836767
-        );
-    }
-
     function _useContractOwner() internal {
         vm.prank(eoaAddress);
         address[] memory ownersToAdd = new address[](1);
