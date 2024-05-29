@@ -8,6 +8,7 @@ test = 'test'
 libs = ['lib']
 optimizer = true
 optimizer_runs = 10_000_000
+fs_permissions = [{ access = "read", path = "./"}]
 
 [fuzz]
 runs = 5000

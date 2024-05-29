@@ -2,33 +2,45 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-
+import "forge-std/StdJson.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
-
 import {LightAccountFactory} from "../src/LightAccountFactory.sol";
 
 // @notice Deploys LightAccountFactory to the address `0x000000893A26168158fbeaDD9335Be5bC96592E2`
 // @dev Note: Script uses EntryPoint at address 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
 // @dev To run: `forge script script/Deploy_LightAccountFactory.s.sol:Deploy_LightAccountFactory --broadcast --rpc-url ${RPC_URL} --verify -vvvv`
 contract Deploy_LightAccountFactory is Script {
+    using stdJson for string;
+
     error InitCodeHashMismatch(bytes32 initCodeHash);
     error DeployedAddressMismatch(address deployed);
 
+    address entryPoint;
+    address expectedAddress;
+    bytes32 expectedInitCodeHash;
+    uint256 salt;
+
+    function readInputsFromPath() internal {
+        string memory json = vm.readFile("input.json");
+        entryPoint = json.readAddress("$.entryPoint");
+        expectedAddress = json.readAddress("$.address");
+        expectedInitCodeHash = json.readBytes32("$.initCodeHash");
+        salt = json.readUint("$.salt");
+    }
+
     function run() public {
-        uint256 deployerPrivateKey = uint256(vm.envBytes32("DEPLOYER_PRIVATE_KEY"));
 
-        vm.startBroadcast(deployerPrivateKey);
+        readInputsFromPath();
+        vm.startBroadcast();
 
-        // Using entryPoint: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
-        // Correct as of Oct 3 2023, from https://docs.alchemy.com/reference/eth-supportedentrypoints
-        IEntryPoint entryPoint = IEntryPoint(payable(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789));
+        IEntryPoint entryPointContract = IEntryPoint(payable(entryPoint));
 
         // Init code hash check
         bytes32 initCodeHash = keccak256(
-            abi.encodePacked(type(LightAccountFactory).creationCode, bytes32(uint256(uint160(address(entryPoint)))))
+            abi.encodePacked(type(LightAccountFactory).creationCode, bytes32(uint256(uint160(address(entryPointContract)))))
         );
 
-        if (initCodeHash != 0x3043a72812fec9b9987853a9b869c1a469dc6e04b0f80da3af2ecb8cf8eed209) {
+        if (initCodeHash != expectedInitCodeHash) {
             revert InitCodeHashMismatch(initCodeHash);
         }
 
@@ -36,16 +48,16 @@ contract Deploy_LightAccountFactory is Script {
         console.log("******** Deploy Inputs *********");
         console.log("********************************");
         console.log("Entrypoint Address is:");
-        console.logAddress(address(entryPoint));
+        console.logAddress(address(entryPointContract));
         console.log("********************************");
         console.log("******** Deploy ...... *********");
         console.log("********************************");
 
         LightAccountFactory factory =
-        new LightAccountFactory{salt: 0x00000000000000000000000000000000000000007845d3459c316000001d6f83}(entryPoint);
+        new LightAccountFactory{salt: bytes32(salt)}(entryPointContract);
 
         // Deployed address check
-        if (address(factory) != 0x000000893A26168158fbeaDD9335Be5bC96592E2) {
+        if (address(factory) != expectedAddress) {
             revert DeployedAddressMismatch(address(factory));
         }
 
