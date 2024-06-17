@@ -16,7 +16,7 @@ contract Deploy_LightAccountFactory is Script {
     address owner;
     uint256 salt;
     uint256 stakeAmount;
-    uint256 unstakeDelay;
+    uint32 unstakeDelay;
 
     error InitCodeHashMismatch(bytes32 initCodeHash);
     error DeployedAddressMismatch(address deployed);
