@@ -16,7 +16,7 @@ contract Deploy_LightAccountFactory is Script {
     address owner;
     uint256 salt;
     uint256 stakeAmount;
-    uint32 unstakeDelay;
+    uint256 unstakeDelay;
 
     error InitCodeHashMismatch(bytes32 initCodeHash);
     error DeployedAddressMismatch(address deployed);
@@ -79,7 +79,7 @@ contract Deploy_LightAccountFactory is Script {
         uint256 currentStakedAmount = entryPoint.getDepositInfo(factoryAddr).stake;
         uint256 stakeRequired = stakeAmount - currentStakedAmount;
         if (stakeRequired > 0) {
-            LightAccountFactory(payable(factoryAddr)).addStake{value: stakeRequired}(unstakeDelay, stakeRequired);
+            LightAccountFactory(payable(factoryAddr)).addStake{value: stakeRequired}(uint32(unstakeDelay), stakeRequired);
             console.log("******** Add Stake Verify *********");
             console.log("Staked factory: ", factoryAddr);
             console.log("Stake amount: ", entryPoint.getDepositInfo(factoryAddr).stake);
